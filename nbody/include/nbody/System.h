@@ -22,9 +22,10 @@ namespace nbody {
     System( std::istream &input ) : _nBodies{}, _body{nullptr} { readState( input ); }
     System( std::string filename ) : _nBodies{}, _body{nullptr} { readState( filename ); }
     ~System() { delete [] _body; }
-    void interactBodies( size_t i, size_t j, float softFactor, Vector3f &acc ) const;
+    void interactBodies( size_t i, size_t j, float softFactor, Vector3f &acc, Vector3f &jerk ) const;
     void computeGravitation();
     void integrateSystem( float dt );
+    void corrector( float dt);
     void readState( std::istream &input );
     void readState( std::string filename );
     void writeState( std::ostream &output ) const;
