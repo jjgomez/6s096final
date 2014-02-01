@@ -7,10 +7,10 @@ int main() {
   try {
     std::ifstream input{ "resources/nbody/binary-system-simple.txt" };
     nbody::Simulation sim{input};
-    for( int i = 0; i < 40; ++i ) {
+    for( int i = 0; i < 2; ++i ) {
       std::cout << "==EVOLUTION " << i + 1 << "\n";
       sim.saveRun();
-      sim.evolveSystem( 1e4, 0.000001 );
+      sim.evolveSystem( 1, 0.000001 );
     }
     sim.saveRun();
     return 0;

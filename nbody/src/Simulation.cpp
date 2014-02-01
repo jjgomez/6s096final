@@ -35,6 +35,7 @@ namespace nbody {
   void Simulation::evolveSystem( int nSteps, float dt ) {
     if( _system != nullptr ) {
       for( int step = 0; step < nSteps; ++step ) {
+          printf("%d\n", step);
         _system->update( dt );
       }
     } else {

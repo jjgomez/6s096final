@@ -9,70 +9,66 @@
 
 namespace nbody {
 
-  inline void System::interactBodies( size_t i, size_t j, float softFactor, Vector3f &acc, Vector3f &jerk ) const {
-      Vector3f r, v, r2, v_r2;
-    r = _body[j].position() - _body[i].position();
-    v = _body[j].velocity() - _body[i].velocity();
+  inline void System::interactBodies( size_t i, size_t j, float softFactor, Vector3f &acc ) const {
+    Vector3f r = _body[j].position() - _body[i].position();
     float distance = r.norm() + softFactor;
     float invDist = 1.0f / distance;
     float invDistCubed = cube( invDist );
-    r2 = r*r;
-    v_r2 = v*r2;
+    //printf("inv = %f, inv3 = %f, dist = %f\n", invDist, invDistCubed, distance);
+    //printf("G = %f\n", NEWTON_G);
     acc = acc + NEWTON_G * _body[j].mass() * invDistCubed * r;
-    jerk = jerk + NEWTON_G* _body[j].mass() * invDistCubed * ( v - ( 3.0f * ((v_r2)*distance *invDistCubed))); // equation for jerk
+   // printf("X: pos = %f, accel = %f\n", r.x(), acc.x());
+   // printf("Y: pos = %f, accel = %f\n", r.y(), acc.y());
+    //printf("Z: pos = %f, accel = %f\n", r.z(), acc.z());
   }
 
   void System::computeGravitation() {
     for( size_t i = 0; i < _nBodies; ++i ) {
       Vector3f acc{ 0.0f, 0.0f, 0.0f };
-      Vector3f jerk{ 0.0f, 0.0f, 0.0f };
       for( size_t j = 0; j < _nBodies; ++j ) {
         if( i != j ) {
-          interactBodies( i, j, _softFactor, acc, jerk );
+          interactBodies( i, j, _softFactor, acc );
         }
       }
       _body[i].force() = acc;
-      _body[i].jerk() = jerk;
     }
   }
 
   void System::integrateSystem( float dt ) {
-    Vector3f r, v, a, j;
+    Vector3f r, v, a;
     for( size_t i = 0; i < _nBodies; ++i ) {
       r = _body[i].position();
       v = _body[i].velocity();
       a = _body[i].force();
-      j = _body[i].jerk();
 
-
-      v = v + ( a * dt ) + j*(dt*dt)/2.0f;
-      //v = v * _dampingFactor;
-      r = r + v * dt + a*dt*dt/2.0f + j*dt*dt*dt/6.0f;
+      v = v + ( a * dt );
+      v = v * _dampingFactor;
+      r = r + v * dt + a * dt *dt / 2.0f;
 
       _body[i].position() = r;
       _body[i].velocity() = v;
     }
   }
 
-  void System::corrector( float dt){
-      Vector3f v, old_v, r, old_r, a, old_a, j, old_j;
-   for ( size_t i = 0; i < _nBodies ; ++i){
-     //  Vector3f v, old_v, r, old_r, a, old_a, j, old_j;
-       v = _body[i].velocity();
-       old_v = _body[i].oldVelocity();
-       r = _body[i].position();
-       old_r = _body[i].oldPosition();
-       a = _body[i].accel();
-       old_a = _body[i].oldAccel();
-       j = _body[i].jerk();
-       old_j = _body[i].oldJerk();
-       v = old_v + (old_a + a) * dt /2.0f + (old_j - j)*dt*dt/12.0f;
-       r = old_r + (old_v + v) * dt /2.0f + (old_a - a)*dt*dt/12.0f;
-       _body[i].position() = r;
-       _body[i].velocity() = v;
+  void System::average(){
+      Vector3f old_r, r, old_v, v;
+      for( size_t i = 0; i < _nBodies; ++i ){
 
+           old_r = _body[i].oldPosition();
+           r = _body[i].position();
+           old_v = _body[i].oldVelocity();
+           v = _body[i].velocity();
+       //    printf("X: oldP = %g, P = %g, oldV = %g, V = %g\n", old_r.x(), r.x(), old_v.x(), v.x());
 
-   }
+           r = (r+old_r)/2.0f;
+           v = (v+old_v)/2.0f;
+
+           _body[i].position() = r;
+           _body[i].velocity() = v;
+        //   printf("X: average pos = %g average vel = %g\n", r.x(),v.x());
+
+       }
+
 
 
   }
@@ -80,7 +76,21 @@ namespace nbody {
   void System::update( float dt ) {
     computeGravitation();
     integrateSystem( dt );
-    corrector( dt );
+    Vector3f r, v;
+    for( size_t i = 0; i < _nBodies; ++i ){
+       // printf("start of for\n");
+       // printf("X: pos = %g, vel = %g \n", _body[i].position().x(), _body[i].velocity().x());
+        r = _body[i].position();
+        v = _body[i].velocity();
+        _body[i].oldPosition() = r;
+        _body[i].oldVelocity() = v;
+       // printf("X old: pos = %g, vel = %g \n", _body[i].oldPosition().x(), _body[i].oldVelocity().x());
+      //  printf("Y old: pos = %g \n", _body[i].oldPosition().y());
+       // printf("Z old: pos = %g \n", _body[i].oldPosition().z());
+       // printf("end of for\n");
+    }
+    integrateSystem( dt );
+    average();
   }
 
   void System::readState( std::istream &input ) {
